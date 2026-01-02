@@ -16,159 +16,184 @@ import javax.imageio.ImageIO;
 
 public class QRGenerator extends JFrame {
 
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	private JTextField titleField;
-	private JTextField descriptionField;
-	private JTextArea dataArea;
-	private JTextField fileNameField;
+    private JTextField titleField;
+    private JTextField descriptionField;
+    private JTextArea dataArea;
+    private JTextField fileNameField;
 
-	public QRGenerator() {
-		setTitle("QR Code Generator");
-		setSize(520, 420);
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setLocationRelativeTo(null);
-		initUI();
+    // Always save in this folder
+    private static final String BASE_FOLDER = "folder_qrgenerator";
 
-		try {
-			// Load icon from resources
-			InputStream iconStream = getClass().getResourceAsStream("/qrgenerator/pc1.png");
-			if (iconStream != null) {
-				Image icon = ImageIO.read(iconStream);
-				setIconImage(icon); // sets tab & taskbar icon
-			} else {
-				System.err.println("Icon not found!");
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+    public QRGenerator() {
+        setTitle("QR Code Generator");
+        setSize(520, 420);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        initUI();
 
-	private void initUI() {
-		JPanel panel = new JPanel(new BorderLayout(10, 10));
-		panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        // Load window icon from resources
+        try (InputStream iconStream =
+                     getClass().getResourceAsStream("/qrgenerator/pc1.png")) {
 
-		// Top fields
-		JPanel fieldsPanel = new JPanel(new GridLayout(3, 2, 5, 5));
+            if (iconStream != null) {
+                setIconImage(ImageIO.read(iconStream));
+            } else {
+                System.err.println("Icon not found in resources");
+            }
 
-		fieldsPanel.add(new JLabel("Title:"));
-		titleField = new JTextField();
-		fieldsPanel.add(titleField);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
-		fieldsPanel.add(new JLabel("Description:"));
-		descriptionField = new JTextField();
-		fieldsPanel.add(descriptionField);
+    private void initUI() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-		fieldsPanel.add(new JLabel("File name:"));
-		fileNameField = new JTextField("untitled-qr.png");
-		fieldsPanel.add(fileNameField);
+        JPanel fieldsPanel = new JPanel(new GridLayout(3, 2, 5, 5));
 
-		panel.add(fieldsPanel, BorderLayout.NORTH);
+        fieldsPanel.add(new JLabel("Title:"));
+        titleField = new JTextField();
+        fieldsPanel.add(titleField);
 
-		// QR data area
-		dataArea = new JTextArea(6, 40);
-		dataArea.setLineWrap(true);
-		dataArea.setWrapStyleWord(true);
+        fieldsPanel.add(new JLabel("Description:"));
+        descriptionField = new JTextField();
+        fieldsPanel.add(descriptionField);
 
-		JScrollPane scrollPane = new JScrollPane(dataArea);
-		scrollPane.setBorder(BorderFactory.createTitledBorder("QR Data"));
+        fieldsPanel.add(new JLabel("File name:"));
+        // Default name: untitled-qr.png inside BASE_FOLDER
+        fileNameField = new JTextField("untitled-qr");
+        fieldsPanel.add(fileNameField);
 
-		panel.add(scrollPane, BorderLayout.CENTER);
+        panel.add(fieldsPanel, BorderLayout.NORTH);
 
-		// Button
-		JButton generateButton = new JButton("Generate QR Code");
-		generateButton.addActionListener(e -> generateQR());
+        dataArea = new JTextArea(6, 40);
+        dataArea.setLineWrap(true);
+        dataArea.setWrapStyleWord(true);
 
-		panel.add(generateButton, BorderLayout.SOUTH);
+        JScrollPane scrollPane = new JScrollPane(dataArea);
+        scrollPane.setBorder(BorderFactory.createTitledBorder("QR Data"));
 
-		setContentPane(panel);
-	}
+        panel.add(scrollPane, BorderLayout.CENTER);
 
-	private void generateQR() {
-		try {
-			String title = titleField.getText().trim();
-			String description = descriptionField.getText().trim();
-			String data = dataArea.getText().trim();
-			String fileName = fileNameField.getText().trim();
+        JButton generateButton = new JButton("Generate QR Code");
+        generateButton.addActionListener(e -> generateQR());
 
-			if (data.isEmpty()) {
-				JOptionPane.showMessageDialog(this, "QR data cannot be empty", "Error", JOptionPane.ERROR_MESSAGE);
-				return;
-			}
+        panel.add(generateButton, BorderLayout.SOUTH);
 
-			if (fileName.isEmpty()) {
-				fileName = "untitled-qr.png";
-			}
+        setContentPane(panel);
+    }
 
-			if (!fileName.toLowerCase().endsWith(".png")) {
-				fileName += ".png";
-			}
+    private void generateQR() {
+        try {
+            String title = titleField.getText().trim();
+            String description = descriptionField.getText().trim();
+            String data = dataArea.getText().trim();
+            String baseName = fileNameField.getText().trim();
 
-			createQRImage(title, description, data, fileName);
+            if (data.isEmpty()) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "QR data cannot be empty",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
 
-			JOptionPane.showMessageDialog(this, "QR code saved as " + fileName);
+            if (baseName.isEmpty()) {
+                baseName = "untitled-qr";
+            }
 
-		} catch (Exception ex) {
-			ex.printStackTrace();
-			JOptionPane.showMessageDialog(this, "Failed to generate QR", "Error", JOptionPane.ERROR_MESSAGE);
-		}
-	}
+            String fullFileName = BASE_FOLDER + "/" + baseName;
+            if (!fullFileName.toLowerCase().endsWith(".png")) {
+                fullFileName += ".png";
+            }
 
-	private void createQRImage(String title, String description, String data, String fileName) throws Exception {
+            createQRImage(title, description, data, fullFileName);
 
-		int qrSize = 600;
-		int width = 600;
-		int height = 720;
+            JOptionPane.showMessageDialog(
+                    this,
+                    "QR code saved as:\n" + new File(fullFileName).getAbsolutePath()
+            );
 
-		QRCodeWriter qrCodeWriter = new QRCodeWriter();
-		BitMatrix bitMatrix = qrCodeWriter.encode(data, BarcodeFormat.QR_CODE, qrSize, qrSize);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Failed to generate QR",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
 
-		BufferedImage qrImage = MatrixToImageWriter.toBufferedImage(bitMatrix);
+    private void createQRImage(
+            String title,
+            String description,
+            String data,
+            String fileName
+    ) throws Exception {
 
-		BufferedImage finalImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        int qrSize = 600;
+        int width = 600;
+        int height = 720;
 
-		Graphics2D g = finalImage.createGraphics();
-		g.setColor(Color.WHITE);
-		g.fillRect(0, 0, width, height);
-		g.setColor(Color.BLACK);
+        QRCodeWriter qrCodeWriter = new QRCodeWriter();
+        BitMatrix bitMatrix =
+                qrCodeWriter.encode(data, BarcodeFormat.QR_CODE, qrSize, qrSize);
 
-		int y = 30;
+        BufferedImage qrImage =
+                MatrixToImageWriter.toBufferedImage(bitMatrix);
 
-		// Title
-		if (!title.isEmpty()) {
-			g.setFont(new Font("SansSerif", Font.BOLD, 22));
-			y = drawCentered(g, title, width, y);
-		}
+        BufferedImage finalImage =
+                new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 
-		// QR
-		int qrX = (width - qrSize) / 2;
-		g.drawImage(qrImage, qrX, y + 10, null);
-		y += qrSize + 30;
+        Graphics2D g = finalImage.createGraphics();
+        g.setColor(Color.WHITE);
+        g.fillRect(0, 0, width, height);
+        g.setColor(Color.BLACK);
 
-		// Description
-		if (!description.isEmpty()) {
-			g.setFont(new Font("SansSerif", Font.PLAIN, 16));
-			drawCentered(g, description, width, y);
-		}
+        int y = 30;
 
-		g.dispose();
+        if (!title.isEmpty()) {
+            g.setFont(new Font("SansSerif", Font.BOLD, 22));
+            y = drawCentered(g, title, width, y);
+        }
 
-		ImageIO.write(finalImage, "PNG", new File(fileName));
-	}
+        int qrX = (width - qrSize) / 2;
+        g.drawImage(qrImage, qrX, y + 10, null);
+        y += qrSize + 30;
 
-	private int drawCentered(Graphics2D g, String text, int width, int y) {
-		FontMetrics fm = g.getFontMetrics();
-		int x = (width - fm.stringWidth(text)) / 2;
-		g.drawString(text, x, y);
-		return y + fm.getHeight();
-	}
+        if (!description.isEmpty()) {
+            g.setFont(new Font("SansSerif", Font.PLAIN, 16));
+            drawCentered(g, description, width, y);
+        }
 
-	public static void main(String[] args) {
-		SwingUtilities.invokeLater(() -> {
-			new QRGenerator().setVisible(true);
-		});
-	}
+        g.dispose();
+
+        // ---------- ENSURE DIRECTORY EXISTS ----------
+        File outputFile = new File(fileName);
+        File parent = outputFile.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
+
+        ImageIO.write(finalImage, "PNG", outputFile);
+    }
+
+    private int drawCentered(Graphics2D g, String text, int width, int y) {
+        FontMetrics fm = g.getFontMetrics();
+        int x = (width - fm.stringWidth(text)) / 2;
+        g.drawString(text, x, y);
+        return y + fm.getHeight();
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() ->
+                new QRGenerator().setVisible(true)
+        );
+    }
 }
